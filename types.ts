@@ -23,3 +23,14 @@ export enum TabOption {
   TEXT = 'TEXT',
   FILE = 'FILE'
 }
+
+export type PlanType = 'free' | 'pro';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  plan: PlanType;
+  dailyUsage: number;
+  lastUsageDate: string; // ISO date string YYYY-MM-DD
+}
