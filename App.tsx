@@ -46,7 +46,7 @@ const App: React.FC = () => {
           AI Detection Protocol
         </h1>
         <p className="text-slate-400 max-w-2xl mx-auto text-lg">
-          Analyze document stylometry, burstiness, and perplexity to distinguish between human cognition and synthetic generation.
+          Advanced forensic analysis of reference integrity, evidence consistency, and linguistic stylometry for academic and professional content.
         </p>
       </header>
 
@@ -69,8 +69,8 @@ const App: React.FC = () => {
              <div className="flex justify-center mb-6">
                <div className="w-20 h-20 border-4 border-slate-800 border-t-primary-500 rounded-full animate-spin"></div>
              </div>
-             <h3 className="text-xl font-semibold text-white mb-2">Analyzing Patterns</h3>
-             <p className="text-slate-400">Measuring perplexity and linguistic entropy...</p>
+             <h3 className="text-xl font-semibold text-white mb-2">Analyzing Dissertations</h3>
+             <p className="text-slate-400">Verifying reference integrity and cross-checking evidence...</p>
            </div>
         ) : !result ? (
           <InputSection onAnalyze={handleAnalyze} isLoading={isLoading} />
