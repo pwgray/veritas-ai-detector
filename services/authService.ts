@@ -1,86 +1,96 @@
 import { User } from '../types';
+import { supabase } from './supabaseClient';
 
-const STORAGE_KEY_USERS = 'veritas_users';
-const STORAGE_KEY_SESSION = 'veritas_session';
-
-// Helper to get today's date string YYYY-MM-DD
 const getTodayString = () => new Date().toISOString().split('T')[0];
 
 export const authService = {
-  // Simulate Sign Up
+  // Sign Up
   register: async (email: string, password: string, name: string): Promise<User> => {
-    await new Promise(resolve => setTimeout(resolve, 800)); // Network delay
-
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '[]');
-    if (users.find((u: any) => u.email === email)) {
-      throw new Error('User already exists');
-    }
-
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
+    // 1. Create Auth User
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      name,
-      plan: 'free',
-      dailyUsage: 0,
-      lastUsageDate: getTodayString()
-    };
+      password,
+      options: {
+        data: { name } // Passed to meta_data, used by trigger to populate profiles
+      }
+    });
 
-    // Store 'password' securely (In a real app, hash this. Here we just mock it)
-    const userRecord = { ...newUser, password }; 
-    users.push(userRecord);
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-    
-    // Auto login
-    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(newUser));
-    return newUser;
+    if (authError) throw new Error(authError.message);
+    if (!authData.user) throw new Error("Registration failed");
+
+    // 2. Fetch the created profile (created via DB trigger)
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (profileError) {
+        // Fallback: Return basic user if profile fetch lags (rare)
+        return {
+            id: authData.user.id,
+            email: email,
+            name: name,
+            plan: 'free',
+            dailyUsage: 0,
+            lastUsageDate: getTodayString()
+        };
+    }
+
+    return mapProfileToUser(profileData);
   },
 
-  // Simulate Login
+  // Login
   login: async (email: string, password: string): Promise<User> => {
-    await new Promise(resolve => setTimeout(resolve, 800)); // Network delay
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
 
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '[]');
-    const userRecord = users.find((u: any) => u.email === email && u.password === password);
+    if (authError) throw new Error(authError.message);
+    if (!authData.user) throw new Error("Login failed");
 
-    if (!userRecord) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Don't return the password
-    const { password: _, ...user } = userRecord;
-    
-    // Reset usage if new day
-    if (user.lastUsageDate !== getTodayString()) {
-      user.dailyUsage = 0;
-      user.lastUsageDate = getTodayString();
-      // Update DB
-      const index = users.findIndex((u: any) => u.id === user.id);
-      users[index] = { ...users[index], ...user };
-      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-    }
-
-    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(user));
+    const user = await authService.getCurrentUser();
+    if (!user) throw new Error("Failed to load user profile");
     return user;
   },
 
-  logout: () => {
-    localStorage.removeItem(STORAGE_KEY_SESSION);
+  logout: async () => {
+    await supabase.auth.signOut();
   },
 
-  getCurrentUser: (): User | null => {
-    const sessionStr = localStorage.getItem(STORAGE_KEY_SESSION);
-    if (!sessionStr) return null;
-    
-    const user = JSON.parse(sessionStr);
-    
-    // Check if we need to reset daily limits based on local time
-    if (user.lastUsageDate !== getTodayString()) {
-      user.dailyUsage = 0;
-      user.lastUsageDate = getTodayString();
-      authService.updateUser(user);
+  // Get Current Session & Profile
+  getCurrentUser: async (): Promise<User | null> => {
+    try {
+      // Safely check for session, handling potential network errors from misconfiguration
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !data?.session?.user) {
+        return null;
+      }
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.session.user.id)
+        .single();
+
+      if (error || !profile) return null;
+
+      // Check if day changed locally vs db
+      const today = getTodayString();
+      if (profile.last_usage_date !== today) {
+        // Reset logic
+        await authService.resetDailyUsage(data.session.user.id);
+        profile.daily_usage = 0;
+        profile.last_usage_date = today;
+      }
+
+      return mapProfileToUser(profile);
+    } catch (e) {
+      console.warn("Error fetching current user:", e);
+      return null;
     }
-    
-    return user;
   },
 
   checkLimit: (user: User): boolean => {
@@ -88,51 +98,66 @@ export const authService = {
     return user.dailyUsage < 3;
   },
 
-  incrementUsage: (userId: string) => {
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '[]');
-    const index = users.findIndex((u: any) => u.id === userId);
+  incrementUsage: async (userId: string) => {
+    const today = getTodayString();
     
-    if (index !== -1) {
-      const user = users[index];
+    // First, get current count to be safe
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('daily_usage, last_usage_date')
+      .eq('id', userId)
+      .single();
       
-      // If day changed reset, else increment
-      if (user.lastUsageDate !== getTodayString()) {
-        user.dailyUsage = 1;
-        user.lastUsageDate = getTodayString();
-      } else {
-        user.dailyUsage += 1;
-      }
-      
-      users[index] = user;
-      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-      
-      // Update session if it's the current user
-      const currentUser = authService.getCurrentUser();
-      if (currentUser && currentUser.id === userId) {
-        const { password, ...safeUser } = user;
-        localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(safeUser));
-      }
+    if (!profile) return;
+
+    let newUsage = profile.daily_usage + 1;
+    let newDate = profile.last_usage_date;
+
+    // Reset if new day detected during increment
+    if (profile.last_usage_date !== today) {
+        newUsage = 1;
+        newDate = today;
     }
+
+    await supabase
+      .from('profiles')
+      .update({ 
+        daily_usage: newUsage,
+        last_usage_date: newDate
+      })
+      .eq('id', userId);
+  },
+
+  resetDailyUsage: async (userId: string) => {
+    const today = getTodayString();
+    await supabase
+      .from('profiles')
+      .update({ daily_usage: 0, last_usage_date: today })
+      .eq('id', userId);
   },
 
   upgradeToPro: async (userId: string): Promise<User> => {
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate Stripe processing
+    // In production, this runs via Stripe Webhook on backend.
+    // For this client-side demo:
     
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '[]');
-    const index = users.findIndex((u: any) => u.id === userId);
-    
-    if (index === -1) throw new Error("User not found");
-    
-    users[index].plan = 'pro';
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-    
-    const { password, ...safeUser } = users[index];
-    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(safeUser));
-    
-    return safeUser;
-  },
-  
-  updateUser: (user: User) => {
-    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(user));
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update({ plan: 'pro' })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return mapProfileToUser(profile);
   }
 };
+
+// Helper to map DB columns to Typescript Interface
+const mapProfileToUser = (profile: any): User => ({
+  id: profile.id,
+  email: profile.email,
+  name: profile.name,
+  plan: profile.plan as 'free' | 'pro',
+  dailyUsage: profile.daily_usage,
+  lastUsageDate: profile.last_usage_date
+});

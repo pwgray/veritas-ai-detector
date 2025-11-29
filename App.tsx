@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // App State
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -23,10 +24,19 @@ const App: React.FC = () => {
 
   // Check session on load
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
+    const initAuth = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+        }
+      } catch (e) {
+        console.error("Auth check failed", e);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    initAuth();
   }, []);
 
   const openAuth = (mode: 'login' | 'signup') => {
@@ -39,8 +49,8 @@ const App: React.FC = () => {
     setIsAuthModalOpen(false);
   };
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleLogout = async () => {
+    await authService.logout();
     setUser(null);
     setResult(null);
   };
@@ -61,9 +71,9 @@ const App: React.FC = () => {
       const data = await analyzeText(text);
       setResult(data);
       // Increment Usage
-      authService.incrementUsage(user.id);
+      await authService.incrementUsage(user.id);
       // Refresh user state to get new usage count
-      const updatedUser = authService.getCurrentUser();
+      const updatedUser = await authService.getCurrentUser();
       if (updatedUser) setUser(updatedUser);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred during analysis.");
@@ -85,6 +95,10 @@ const App: React.FC = () => {
       setLimitError(false);
     }
   };
+
+  if (isInitializing) {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-500">Loading Veritas...</div>;
+  }
 
   // If not logged in, show Landing Page
   if (!user) {
@@ -123,7 +137,7 @@ const App: React.FC = () => {
               <div className="hidden md:flex flex-col items-end mr-2">
                  <span className="text-sm font-medium text-white">{user.name}</span>
                  <span className={`text-xs px-1.5 rounded ${user.plan === 'pro' ? 'bg-primary-500/20 text-primary-400' : 'bg-slate-800 text-slate-400'}`}>
-                   {user.plan === 'pro' ? 'PRO PLAN' : `${3 - user.dailyUsage} credits left`}
+                   {user.plan === 'pro' ? 'PRO PLAN' : `${Math.max(0, 3 - user.dailyUsage)} credits left`}
                  </span>
               </div>
               <button onClick={handleLogout} className="text-sm text-slate-500 hover:text-slate-300">
