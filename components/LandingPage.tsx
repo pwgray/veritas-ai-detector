@@ -92,8 +92,58 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onSignup }) => {
         </div>
       </section>
 
+      {/* Methodology & Responsibility Section */}
+      <section className="py-24 bg-slate-950">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row gap-12 items-start">
+            <div className="flex-1">
+              <h2 className="text-3xl font-bold text-white mb-6">Assisted Professional Analysis</h2>
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-xl font-semibold text-primary-400 mb-2">Accelerate Your Review Process</h3>
+                  <p className="text-slate-400 leading-relaxed">
+                    Veritas is engineered to act as a force multiplier for academic reviewers. By automating the detection of "red flags"—such as hallucinated citations, repetitive sentence structures, or unsupported claims—we allow you to focus your attention on the sections that require deep human expertise.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-primary-400 mb-2">Identify Anomalies, Not Absolutes</h3>
+                  <p className="text-slate-400 leading-relaxed">
+                    Our scoring system provides a probability assessment based on linguistic patterns. It is designed to highlight areas of concern (high perplexity, mismatched evidence) that warrant further investigation, rather than serving as a judge or jury.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex-1 w-full">
+              <div className="bg-yellow-900/10 border border-yellow-500/20 rounded-2xl p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-6 opacity-10">
+                  <svg className="w-32 h-32 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                </div>
+                <div className="relative z-10">
+                  <h3 className="text-xl font-bold text-yellow-500 mb-4 flex items-center gap-2">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    Important Methodology Notice
+                  </h3>
+                  <ul className="space-y-4 text-slate-300 text-sm leading-relaxed list-disc pl-5 marker:text-yellow-500/50">
+                    <li>
+                      <strong className="text-white">Not a Definitive Decision:</strong> The AI Probability Score is an indicator of linguistic patterns, not definitive proof of authorship.
+                    </li>
+                    <li>
+                      <strong className="text-white">Potential for Errors:</strong> As an AI-powered tool itself, Veritas can make mistakes, including false positives or false negatives.
+                    </li>
+                    <li>
+                      <strong className="text-white">User Responsibility:</strong> It is always the responsibility of the user to validate the findings. You must verify citations and read the content to confirm if the "red flags" are valid in context.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
-      <section className="py-24">
+      <section className="py-24 border-t border-slate-900">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-white mb-4">Simple, Transparent Pricing</h2>

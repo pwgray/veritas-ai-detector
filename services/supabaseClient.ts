@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_URL as FILE_URL, SUPABASE_ANON_KEY as FILE_KEY } from '../.env';
 
 // Helper to safely access process.env without crashing in browser environments
 const getEnv = (key: string) => {
@@ -9,16 +10,26 @@ const getEnv = (key: string) => {
   }
 };
 
-// Use environment variables if available, otherwise use placeholders to prevent 'supabaseUrl is required' crash
-const SUPABASE_URL = getEnv('SUPABASE_URL') || 'https://placeholder-project.supabase.co';
-const SUPABASE_KEY = getEnv('SUPABASE_ANON_KEY') || 'placeholder-key';
+// User provided credentials from the .env.ts file
+const PROVIDED_URL = FILE_URL;
+const PROVIDED_KEY = FILE_KEY;
 
-// Log warning if running with placeholders
-if (SUPABASE_URL === 'https://placeholder-project.supabase.co') {
-  console.warn(
-    "Supabase credentials are missing or invalid. Authentication and database features will not work.\n" +
-    "Please set SUPABASE_URL and SUPABASE_ANON_KEY in your environment variables."
-  );
+const envUrl = getEnv('SUPABASE_URL');
+const envKey = getEnv('SUPABASE_ANON_KEY');
+
+// Use provided credentials if env vars are missing
+const SUPABASE_URL = envUrl || PROVIDED_URL;
+const SUPABASE_KEY = envKey || PROVIDED_KEY;
+
+// Determine if we have valid credentials.
+export const isSupabaseConfigured = !!(
+  SUPABASE_URL && 
+  SUPABASE_KEY && 
+  SUPABASE_URL !== 'https://placeholder-project.supabase.co'
+);
+
+if (!isSupabaseConfigured) {
+  console.warn("Veritas: Supabase not configured. Falling back to local demo mode.");
 }
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);

@@ -137,7 +137,7 @@ const App: React.FC = () => {
               <div className="hidden md:flex flex-col items-end mr-2">
                  <span className="text-sm font-medium text-white">{user.name}</span>
                  <span className={`text-xs px-1.5 rounded ${user.plan === 'pro' ? 'bg-primary-500/20 text-primary-400' : 'bg-slate-800 text-slate-400'}`}>
-                   {user.plan === 'pro' ? 'PRO PLAN' : `${Math.max(0, 3 - user.dailyUsage)} credits left`}
+                   {user.plan === 'pro' ? 'Unlimited' : `${Math.max(0, 3 - user.dailyUsage)} credits left`}
                  </span>
               </div>
               <button onClick={handleLogout} className="text-sm text-slate-500 hover:text-slate-300">
@@ -184,16 +184,6 @@ const App: React.FC = () => {
             <p className="text-slate-400 max-w-2xl mx-auto text-lg">
               Advanced forensic analysis of reference integrity and evidence consistency.
             </p>
-            {user.plan === 'free' && (
-               <div className="mt-4 inline-block">
-                 <button 
-                   onClick={() => setIsPaymentModalOpen(true)}
-                   className="text-xs font-semibold text-primary-400 hover:text-primary-300 underline underline-offset-4"
-                 >
-                   Upgrade to Unlimited Analysis &rarr;
-                 </button>
-               </div>
-            )}
           </div>
         )}
 
